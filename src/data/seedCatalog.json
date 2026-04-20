@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "locale": "fr-FR",
+  "meta": {
+    "noteFormat": "[string, fret, beat, duration, technique]",
+    "stringMap": {"1": "E4", "2": "B3", "3": "G3", "4": "D3", "5": "A2", "6": "E2"},
+    "beatUnit": "1/8 (croche)",
+    "techniques": {"h": "hammer-on", "p": "pull-off", "s": "slide", "b": "bend", "null": "attaque simple"}
+  },
+  "arpeggios": [
+    {"id": "arp-cmaj7-C", "name": "Cmaj7 — C shape", "type": "arpeggio", "root": "C", "quality": "maj7", "cagedShape": "C", "bassString": 5, "notes": [[5,3,1,2,null],[4,2,2,2,null],[4,5,3,2,null],[3,4,4,2,null],[2,5,5,2,null],[1,3,6,2,null],[1,7,7,2,null]]},
+    {"id": "arp-cmaj7-A", "name": "Cmaj7 — A shape", "type": "arpeggio", "root": "C", "quality": "maj7", "cagedShape": "A", "bassString": 5, "notes": [[5,3,1,2,null],[4,5,2,2,null],[3,4,3,2,null],[3,7,4,2,null],[2,5,5,2,null],[2,8,6,2,null],[1,7,7,2,null]]},
+    {"id": "arp-cmaj7-G", "name": "Cmaj7 — G shape", "type": "arpeggio", "root": "C", "quality": "maj7", "cagedShape": "G", "bassString": 6, "notes": [[6,8,1,2,null],[5,7,2,2,null],[5,10,3,2,null],[4,9,4,2,null],[3,9,5,2,null],[2,8,6,2,null],[1,7,7,2,null]]},
+    {"id": "arp-cmaj7-E", "name": "Cmaj7 — E shape", "type": "arpeggio", "root": "C", "quality": "maj7", "cagedShape": "E", "bassString": 6, "notes": [[6,8,1,2,null],[5,10,2,2,null],[4,9,3,2,null],[4,12,4,2,null],[3,9,5,2,null],[2,12,6,2,null],[1,12,7,2,null]]},
+    {"id": "arp-cmaj7-D", "name": "Cmaj7 — D shape", "type": "arpeggio", "root": "C", "quality": "maj7", "cagedShape": "D", "bassString": 5, "notes": [[5,15,1,2,null],[4,14,2,2,null],[3,12,3,2,null],[2,13,4,2,null],[2,15,5,2,null],[1,15,6,2,null]]},
+    {"id": "arp-cm7-C", "name": "Cm7 — C shape", "type": "arpeggio", "root": "C", "quality": "m7", "cagedShape": "C", "bassString": 5, "notes": [[5,3,1,2,null],[4,1,2,2,null],[4,5,3,2,null],[3,3,4,2,null],[2,4,5,2,null],[1,3,6,2,null],[1,6,7,2,null]]},
+    {"id": "arp-cm7-A", "name": "Cm7 — A shape", "type": "arpeggio", "root": "C", "quality": "m7", "cagedShape": "A", "bassString": 5, "notes": [[5,3,1,2,null],[4,5,2,2,null],[3,3,3,2,null],[3,6,4,2,null],[2,4,5,2,null],[2,8,6,2,null],[1,6,7,2,null]]},
+    {"id": "arp-cm7-G", "name": "Cm7 — G shape", "type": "arpeggio", "root": "C", "quality": "m7", "cagedShape": "G", "bassString": 6, "notes": [[6,8,1,2,null],[5,6,2,2,null],[5,10,3,2,null],[4,8,4,2,null],[3,8,5,2,null],[2,8,6,2,null],[1,6,7,2,null]]},
+    {"id": "arp-cm7-E", "name": "Cm7 — E shape", "type": "arpeggio", "root": "C", "quality": "m7", "cagedShape": "E", "bassString": 6, "notes": [[6,8,1,2,null],[5,10,2,2,null],[4,8,3,2,null],[4,10,4,2,null],[3,8,5,2,null],[2,11,6,2,null],[1,11,7,2,null]]},
+    {"id": "arp-cm7-D", "name": "Cm7 — D shape", "type": "arpeggio", "root": "C", "quality": "m7", "cagedShape": "D", "bassString": 5, "notes": [[5,15,1,2,null],[4,13,2,2,null],[3,12,3,2,null],[2,13,4,2,null],[2,15,5,2,null],[1,13,6,2,null]]},
+    {"id": "arp-c7-C", "name": "C7 — C shape", "type": "arpeggio", "root": "C", "quality": "7", "cagedShape": "C", "bassString": 5, "notes": [[5,3,1,2,null],[4,2,2,2,null],[4,5,3,2,null],[3,3,4,2,null],[2,5,5,2,null],[1,3,6,2,null],[1,6,7,2,null]]},
+    {"id": "arp-c7-A", "name": "C7 — A shape", "type": "arpeggio", "root": "C", "quality": "7", "cagedShape": "A", "bassString": 5, "notes": [[5,3,1,2,null],[4,5,2,2,null],[3,3,3,2,null],[3,7,4,2,null],[2,5,5,2,null],[2,8,6,2,null],[1,6,7,2,null]]},
+    {"id": "arp-c7-G", "name": "C7 — G shape", "type": "arpeggio", "root": "C", "quality": "7", "cagedShape": "G", "bassString": 6, "notes": [[6,8,1,2,null],[5,7,2,2,null],[5,10,3,2,null],[4,8,4,2,null],[3,9,5,2,null],[2,8,6,2,null],[1,6,7,2,null]]},
+    {"id": "arp-c7-E", "name": "C7 — E shape", "type": "arpeggio", "root": "C", "quality": "7", "cagedShape": "E", "bassString": 6, "notes": [[6,8,1,2,null],[5,10,2,2,null],[4,8,3,2,null],[4,12,4,2,null],[3,9,5,2,null],[2,11,6,2,null],[1,12,7,2,null]]},
+    {"id": "arp-c7-D", "name": "C7 — D shape", "type": "arpeggio", "root": "C", "quality": "7", "cagedShape": "D", "bassString": 5, "notes": [[5,15,1,2,null],[4,14,2,2,null],[3,12,3,2,null],[2,13,4,2,null],[2,15,5,2,null],[1,13,6,2,null]]},
+    {"id": "arp-cm7b5-C", "name": "Cm7b5 — C shape", "type": "arpeggio", "root": "C", "quality": "m7b5", "cagedShape": "C", "bassString": 5, "notes": [[5,3,1,2,null],[4,1,2,2,null],[4,4,3,2,null],[3,3,4,2,null],[2,4,5,2,null],[1,2,6,2,null],[1,6,7,2,null]]},
+    {"id": "arp-cm7b5-A", "name": "Cm7b5 — A shape", "type": "arpeggio", "root": "C", "quality": "m7b5", "cagedShape": "A", "bassString": 5, "notes": [[5,3,1,2,null],[4,4,2,2,null],[3,3,3,2,null],[3,6,4,2,null],[2,4,5,2,null],[2,7,6,2,null],[1,6,7,2,null]]},
+    {"id": "arp-cm7b5-G", "name": "Cm7b5 — G shape", "type": "arpeggio", "root": "C", "quality": "m7b5", "cagedShape": "G", "bassString": 6, "notes": [[6,8,1,2,null],[5,6,2,2,null],[5,9,3,2,null],[4,8,4,2,null],[3,8,5,2,null],[2,7,6,2,null],[1,6,7,2,null]]},
+    {"id": "arp-cm7b5-E", "name": "Cm7b5 — E shape", "type": "arpeggio", "root": "C", "quality": "m7b5", "cagedShape": "E", "bassString": 6, "notes": [[6,8,1,2,null],[5,9,2,2,null],[4,8,3,2,null],[4,11,4,2,null],[3,8,5,2,null],[2,11,6,2,null]]},
+    {"id": "arp-cm7b5-D", "name": "Cm7b5 — D shape", "type": "arpeggio", "root": "C", "quality": "m7b5", "cagedShape": "D", "bassString": 5, "notes": [[5,14,1,2,null],[4,13,2,2,null],[3,11,3,2,null],[2,13,4,2,null],[2,15,5,2,null],[1,13,6,2,null]]},
+    {"id": "arp-cdim7-C", "name": "Cdim7 — C shape", "type": "arpeggio", "root": "C", "quality": "dim7", "cagedShape": "C", "bassString": 5, "notes": [[5,3,1,2,null],[4,1,2,2,null],[4,4,3,2,null],[3,2,4,2,null],[2,4,5,2,null],[1,2,6,2,null]]},
+    {"id": "arp-cdim7-A", "name": "Cdim7 — A shape", "type": "arpeggio", "root": "C", "quality": "dim7", "cagedShape": "A", "bassString": 5, "notes": [[5,3,1,2,null],[4,4,2,2,null],[3,2,3,2,null],[3,6,4,2,null],[2,4,5,2,null],[2,7,6,2,null]]},
+    {"id": "arp-cdim7-G", "name": "Cdim7 — G shape", "type": "arpeggio", "root": "C", "quality": "dim7", "cagedShape": "G", "bassString": 6, "notes": [[6,8,1,2,null],[5,6,2,2,null],[5,9,3,2,null],[4,7,4,2,null],[3,8,5,2,null],[2,7,6,2,null]]},
+    {"id": "arp-cdim7-E", "name": "Cdim7 — E shape", "type": "arpeggio", "root": "C", "quality": "dim7", "cagedShape": "E", "bassString": 6, "notes": [[6,8,1,2,null],[5,9,2,2,null],[4,7,3,2,null],[4,11,4,2,null],[3,8,5,2,null],[2,10,6,2,null]]},
+    {"id": "arp-cdim7-D", "name": "Cdim7 — D shape", "type": "arpeggio", "root": "C", "quality": "dim7", "cagedShape": "D", "bassString": 5, "notes": [[5,14,1,2,null],[4,13,2,2,null],[3,11,3,2,null],[2,13,4,2,null],[2,15,5,2,null],[1,13,6,2,null]]}
+  ],
+  "licks": [
+    {"id": "lick-iiVI-maj-01", "name": "ii-V-I majeur, bebop descendant", "context": "Dm7 | G7 | Cmaj7", "inspiration": "Charlie Parker (bebop scale + chromatic approach sur la b9)", "position": "5e case", "notes": [[3,7,1,1,null],[3,5,2,1,null],[4,7,3,1,null],[4,5,4,1,null],[3,4,5,1,"h"],[3,5,6,1,null],[2,4,7,1,null],[2,5,8,1,null],[2,3,9,2,null],[3,5,11,2,null]]},
+    {"id": "lick-iiVI-maj-02", "name": "Enclosure chromatique sur la tonique", "context": "Dm7 | G7 | Cmaj7", "inspiration": "Barry Harris (half-step enclosure)", "position": "8e case", "notes": [[2,10,1,1,null],[2,8,2,1,null],[3,9,3,1,null],[3,7,4,1,null],[2,8,5,2,null],[2,11,7,2,null],[1,8,9,2,null]]},
+    {"id": "lick-iiVI-maj-03", "name": "3-to-b9 sur V7", "context": "Dm7 | G7 | Cmaj7", "inspiration": "Joe Pass (altération de la dominante)", "position": "3e case", "notes": [[4,5,1,1,null],[3,5,2,1,null],[2,6,3,1,null],[2,4,4,1,null],[3,4,5,1,null],[4,5,6,1,null],[4,3,7,1,null],[5,3,8,2,null]]},
+    {"id": "lick-iiVI-maj-04", "name": "Wes-style octave + triade", "context": "Dm7 | G7 | Cmaj7", "inspiration": "Wes Montgomery (triades supérieures Bm7b5 sur G7 = G9)", "position": "7e case", "notes": [[4,7,1,2,null],[2,8,3,2,null],[3,8,5,1,null],[2,8,6,1,null],[1,7,7,2,null],[2,8,9,2,null],[3,9,11,2,null]]},
+    {"id": "lick-iiVI-min-01", "name": "ii-V-i mineur, enclosure + altérée", "context": "Dm7b5 | G7alt | Cm7", "inspiration": "Grant Green (jeu direct sur mineur)", "position": "5e case", "notes": [[3,6,1,1,null],[3,5,2,1,null],[3,3,3,1,null],[4,5,4,1,null],[4,6,5,1,null],[3,7,6,1,null],[3,4,7,1,"s"],[3,3,8,1,null],[4,5,9,2,null],[5,3,11,2,null]]},
+    {"id": "lick-iiVI-min-02", "name": "Superlocrien sur altérée", "context": "Dm7b5 | G7alt | Cm7", "inspiration": "John Coltrane (Ab mélodique sur G7alt)", "position": "8e case", "notes": [[3,8,1,1,null],[2,9,2,1,null],[2,11,3,1,null],[1,8,4,1,null],[1,11,5,2,null],[2,11,7,1,"b"],[3,10,8,1,null],[4,10,9,2,null],[5,10,11,2,null]]},
+    {"id": "lick-iiVI-min-03", "name": "Dim7 comme b9 de la dominante", "context": "Dm7b5 | G7alt | Cm7", "inspiration": "Pat Martino (Abdim7 sur G7)", "position": "5e case", "notes": [[4,5,1,1,null],[3,5,2,1,null],[2,4,3,1,null],[2,7,4,1,null],[3,4,5,1,null],[2,4,6,1,null],[3,5,7,1,null],[4,4,8,1,null],[5,3,9,4,null]]},
+    {"id": "lick-iiVI-min-04", "name": "Ligne harmonique mineur mélodique", "context": "Dm7b5 | G7alt | Cm7", "inspiration": "Kurt Rosenwinkel (modern post-bop)", "position": "10e case", "notes": [[2,13,1,1,null],[3,12,2,1,null],[3,10,3,1,null],[4,12,4,1,null],[4,10,5,1,null],[3,11,6,1,"h"],[3,12,7,1,null],[2,13,8,1,null],[2,11,9,2,null],[3,10,11,2,null]]}
+  ],
+  "voicings": [
+    {"id": "v-cmaj7-drop2-1234", "chord": "Cmaj7", "type": "drop2", "stringSet": [1,2,3,4], "notes": [[4,10,1,4,null],[3,9,1,4,null],[2,8,1,4,null],[1,7,1,4,null]]},
+    {"id": "v-cmaj7-drop2-2345", "chord": "Cmaj7", "type": "drop2", "stringSet": [2,3,4,5], "notes": [[5,3,1,4,null],[4,5,1,4,null],[3,4,1,4,null],[2,5,1,4,null]]},
+    {"id": "v-cmaj7-shell-456", "chord": "Cmaj7", "type": "shell", "stringSet": [4,5,6], "notes": [[6,8,1,4,null],[5,10,1,4,null],[4,9,1,4,null]]},
+    {"id": "v-cm7-drop2-1234", "chord": "Cm7", "type": "drop2", "stringSet": [1,2,3,4], "notes": [[4,10,1,4,null],[3,8,1,4,null],[2,8,1,4,null],[1,6,1,4,null]]},
+    {"id": "v-cm7-drop2-2345", "chord": "Cm7", "type": "drop2", "stringSet": [2,3,4,5], "notes": [[5,3,1,4,null],[4,5,1,4,null],[3,3,1,4,null],[2,4,1,4,null]]},
+    {"id": "v-cm7-shell-456", "chord": "Cm7", "type": "shell", "stringSet": [4,5,6], "notes": [[6,8,1,4,null],[5,10,1,4,null],[4,8,1,4,null]]},
+    {"id": "v-c7-drop2-1234", "chord": "C7", "type": "drop2", "stringSet": [1,2,3,4], "notes": [[4,10,1,4,null],[3,9,1,4,null],[2,8,1,4,null],[1,6,1,4,null]]},
+    {"id": "v-c7-drop2-2345", "chord": "C7", "type": "drop2", "stringSet": [2,3,4,5], "notes": [[5,3,1,4,null],[4,5,1,4,null],[3,3,1,4,null],[2,5,1,4,null]]},
+    {"id": "v-c7-shell-456", "chord": "C7", "type": "shell", "stringSet": [4,5,6], "notes": [[6,8,1,4,null],[5,10,1,4,null],[4,8,1,4,null]]},
+    {"id": "v-cm7b5-drop2-1234", "chord": "Cm7b5", "type": "drop2", "stringSet": [1,2,3,4], "notes": [[4,10,1,4,null],[3,8,1,4,null],[2,7,1,4,null],[1,6,1,4,null]]},
+    {"id": "v-cm7b5-drop2-2345", "chord": "Cm7b5", "type": "drop2", "stringSet": [2,3,4,5], "notes": [[5,3,1,4,null],[4,4,1,4,null],[3,3,1,4,null],[2,4,1,4,null]]},
+    {"id": "v-cm7b5-shell-456", "chord": "Cm7b5", "type": "shell", "stringSet": [4,5,6], "notes": [[6,8,1,4,null],[5,9,1,4,null],[4,8,1,4,null]]},
+    {"id": "v-cdim7-drop2-1234", "chord": "Cdim7", "type": "drop2", "stringSet": [1,2,3,4], "notes": [[4,10,1,4,null],[3,8,1,4,null],[2,7,1,4,null],[1,5,1,4,null]]},
+    {"id": "v-cdim7-drop2-2345", "chord": "Cdim7", "type": "drop2", "stringSet": [2,3,4,5], "notes": [[5,3,1,4,null],[4,4,1,4,null],[3,2,1,4,null],[2,4,1,4,null]]},
+    {"id": "v-cdim7-shell-456", "chord": "Cdim7", "type": "shell", "stringSet": [4,5,6], "notes": [[6,8,1,4,null],[5,9,1,4,null],[4,7,1,4,null]]}
+  ],
+  "standards": [
+    {"id": "std-autumn-leaves", "title": "Autumn Leaves", "key": "Em", "tempo": 120, "form": "AAB"},
+    {"id": "std-all-the-things", "title": "All The Things You Are", "key": "Ab", "tempo": 160, "form": "AABA"},
+    {"id": "std-blue-bossa", "title": "Blue Bossa", "key": "Cm", "tempo": 150, "form": "AB"},
+    {"id": "std-twnnbau", "title": "There Will Never Be Another You", "key": "Eb", "tempo": 180, "form": "ABAC"},
+    {"id": "std-solar", "title": "Solar", "key": "Cm", "tempo": 220, "form": "12-bar"},
+    {"id": "std-misty", "title": "Misty", "key": "Eb", "tempo": 70, "form": "AABA"}
+  ],
+  "pentatonics": [
+    {"id": "penta-min-on-m7", "name": "Pentatonique mineure sur m7", "application": "Cm7 → penta Cm (C Eb F G Bb)", "position": "8e case"},
+    {"id": "penta-m7b5-locrian", "name": "Pentatonique m7b5 (locrien penta)", "application": "Dm7b5 → penta m7b5 sur D (D F Ab C Eb)", "position": "5e case"},
+    {"id": "penta-alt-superlocrian", "name": "Pentatonique altérée (superlocrien)", "application": "G7alt → penta mineure 1/2 ton au-dessus (Abm penta)", "position": "4e case"},
+    {"id": "penta-hexa-iiV", "name": "Hexatonique ii-V (Dm + Em)", "application": "Dm7/G7 → penta Dm + Em pour 9/13 sur G7", "position": "7e case"},
+    {"id": "penta-maj-on-maj7", "name": "Pentatonique majeure sur IVmaj7 → Imaj7", "application": "Cmaj7 → penta G maj = 9,3,#11,6,7", "position": "10e case"},
+    {"id": "penta-kumoi-modal", "name": "Kumoi (penta mineure #2) sur modal", "application": "Cm modal → kumoi C D Eb G A", "position": "8e case"}
+  ],
+  "original_features": [
+    {"id": "feat-position-lock", "name": "Position Lock Challenge", "description": "Changer de position CAGED tous les 4 temps pendant un chorus. Force à sortir de la position fétiche."},
+    {"id": "feat-comping-timeline", "name": "Comping Timeline Challenge", "description": "Trio audio joue un standard, l'utilisateur place ses attaques d'accords sur une grille rythmique (Charleston, anticipations)."},
+    {"id": "feat-lick-deconstructor", "name": "Lick Deconstructor", "description": "Détecte le lick joué (mic/MIDI), décompose en atomes (enclosure, arpège, chromatisme), propose variations."},
+    {"id": "feat-forbidden-notes", "name": "Forbidden Notes Roulette", "description": "Roulette tire 2 notes interdites, improviser sans jamais les jouer. Force l'usage des tensions."},
+    {"id": "feat-voicing-voice-leading", "name": "Voice Leading Gym", "description": "Impose une règle de voice leading (ex : voix sup bouge max d'un ton). Surbrillance des voicings valides."}
+  ]
+}
