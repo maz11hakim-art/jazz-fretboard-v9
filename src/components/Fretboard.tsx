@@ -111,6 +111,19 @@ export function Fretboard({ notes, activeIdx = -1, editorMode = false, editorSel
     return out
   }, [editorMode, displayMode, scale, rootPc, cagedShape, fretCount])
 
+  // Notes currently sounding: every note sharing the same beat as activeIdx.
+  // Handles chords/voicings where several notes strike simultaneously.
+  const activeKeys = useMemo(() => {
+    if (activeIdx < 0 || !notes[activeIdx]) return new Set<string>()
+    const beat = notes[activeIdx][2]
+    return new Set(notes.filter((n) => n[2] === beat).map((n) => `${n[0]}-${n[1]}`))
+  }, [notes, activeIdx])
+  const playbackActive = activeIdx >= 0 && activeKeys.size > 0
+  const overlaySet = useMemo(
+    () => new Set(overlay.map((o) => `${o.s}-${o.f}`)),
+    [overlay],
+  )
+
   const handleCell = (s: number, f: number) => {
     if (onCellClick) onCellClick(s, f)
     else playNoteAt(s, f)
@@ -258,17 +271,26 @@ export function Fretboard({ notes, activeIdx = -1, editorMode = false, editorSel
             const kind = highlightKindForInterval(rel)
             const color = KIND_COLOR[kind]
             const isRoot = kind === 'root'
-            const r = isRoot ? 10 : 8
+            const key = `${s}-${f}`
+            const isActive = activeKeys.has(key)
+            const groupOpacity = playbackActive ? (isActive ? 1 : 0.2) : 0.95
+            const r = isActive ? 11 : isRoot ? 10 : 8
             const label = displayMode === 'degrees' ? degreeLabel(rel) : nameAt(s, f)
             return (
-              <g key={`ov-${s}-${f}`} opacity={0.95} pointerEvents="none">
-                <circle cx={cx} cy={cy} r={r} fill={color} stroke="#0a0a0a" strokeWidth={isRoot ? 1.5 : 1} />
+              <g
+                key={`ov-${s}-${f}`}
+                opacity={groupOpacity}
+                style={{ transition: 'opacity .12s' }}
+                pointerEvents="none"
+              >
+                {isActive && <circle cx={cx} cy={cy} r={r + 6} fill={color} opacity={0.35} />}
+                <circle cx={cx} cy={cy} r={r} fill={color} stroke="#0a0a0a" strokeWidth={isRoot || isActive ? 1.5 : 1} />
                 {showNoteNames && (
                   <text
                     x={cx}
                     y={cy + 3}
                     fill="#0a0a0a"
-                    fontSize={isRoot ? 9 : 8}
+                    fontSize={isRoot || isActive ? 9 : 8}
                     fontWeight={700}
                     fontFamily="JetBrains Mono"
                     textAnchor="middle"
@@ -335,17 +357,35 @@ export function Fretboard({ notes, activeIdx = -1, editorMode = false, editorSel
               )
             })}
 
-          {/* Active marker in non-sequence modes */}
-          {displayMode !== 'sequence' && !editorMode && activeIdx >= 0 && notes[activeIdx] && (() => {
-            const [s, f] = notes[activeIdx]
-            const { cx, cy } = notePos(s, f)
-            return (
-              <g pointerEvents="none">
-                <circle cx={cx} cy={cy} r={14} fill="#fbbf24" opacity={0.45} />
-                <circle cx={cx} cy={cy} r={10} fill="#fbbf24" stroke="#0a0a0a" strokeWidth={1.5} />
-              </g>
-            )
-          })()}
+          {/* Fallback active markers in non-sequence modes: highlight notes played
+              but absent from the scale overlay (e.g. chromatic passing tones). */}
+          {displayMode !== 'sequence' && !editorMode && playbackActive &&
+            [...activeKeys].map((key) => {
+              if (overlaySet.has(key)) return null
+              const [sStr, fStr] = key.split('-')
+              const s = parseInt(sStr, 10)
+              const f = parseInt(fStr, 10)
+              const { cx, cy } = notePos(s, f)
+              return (
+                <g key={`fb-${key}`} pointerEvents="none">
+                  <circle cx={cx} cy={cy} r={14} fill="#fbbf24" opacity={0.4} />
+                  <circle cx={cx} cy={cy} r={10} fill="#fbbf24" stroke="#0a0a0a" strokeWidth={1.5} />
+                  {showNoteNames && (
+                    <text
+                      x={cx}
+                      y={cy + 3}
+                      fill="#0a0a0a"
+                      fontSize={9}
+                      fontWeight={700}
+                      fontFamily="JetBrains Mono"
+                      textAnchor="middle"
+                    >
+                      {nameAt(s, f)}
+                    </text>
+                  )}
+                </g>
+              )
+            })}
 
           {/* Path trail dots */}
           {displayMode !== 'sequence' && !editorMode && notes.length > 0 &&
