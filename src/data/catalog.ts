@@ -1,4 +1,6 @@
 import raw from './seedCatalog.json'
+import solosData from './solos.json'
+import pentaData from './pentaLicks.json'
 import type { NoteTuple } from '../lib/notes'
 
 export type Arpeggio = {
@@ -44,6 +46,22 @@ export type Pentatonic = {
   position: string
 }
 
+export type Solo = {
+  id: string
+  name: string
+  inspiration: string
+  tempo: number
+  notes: NoteTuple[]
+}
+
+export type PentaLick = {
+  id: string
+  name: string
+  key: string
+  tempo: number
+  notes: NoteTuple[]
+}
+
 export type OriginalFeature = {
   id: string
   name: string
@@ -60,6 +78,14 @@ export type Catalog = {
   standards: Standard[]
   pentatonics: Pentatonic[]
   original_features: OriginalFeature[]
+  solos: Solo[]
+  penta_licks: PentaLick[]
 }
 
-export const catalog = raw as unknown as Catalog
+const base = raw as unknown as Omit<Catalog, 'solos' | 'penta_licks'>
+
+export const catalog: Catalog = {
+  ...base,
+  solos: solosData as Solo[],
+  penta_licks: pentaData as PentaLick[],
+}
