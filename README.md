@@ -2,6 +2,8 @@
 
 Application web (PWA) d'apprentissage du jazz à la guitare.
 
+**App en ligne** : https://jazz-fretboard-v9-maz.netlify.app/
+
 - **Fretboard SVG** interactif (horizontal/vertical auto selon orientation)
 - **Audio** Tone.js Sampler + SoundFont jazz guitar (FluidR3 preset 26)
 - **Catalogue** : licks ii-V-I, arpèges CAGED 7e (maj7/m7/7/m7b5/dim7), voicings drop-2/shell, standards, pentatoniques jazz
@@ -41,3 +43,4 @@ src/
 ## Deploy
 
 Push vers `main` → Netlify build auto via `netlify.toml`.
+Site déployé : https://jazz-fretboard-v9-maz.netlify.app/
