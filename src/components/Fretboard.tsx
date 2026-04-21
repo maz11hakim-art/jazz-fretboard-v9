@@ -13,7 +13,6 @@ import {
 type Props = {
   notes: NoteTuple[]
   activeIdx?: number
-  orientation?: 'horizontal' | 'vertical'
   editorMode?: boolean
   editorSelection?: Set<string>
   onCellClick?: (string: number, fret: number) => void
@@ -22,14 +21,13 @@ type Props = {
 const INLAYS = new Set([3, 5, 7, 9, 15, 17, 19, 21])
 const DOUBLE_INLAYS = new Set([12, 24])
 
-// Classic Fender-like fret spacing (exponential).
+// Classic exponential fret spacing.
 const FRET_SCALE = 0.943874
 const cumulativeWidths = (count: number) => {
   const w: number[] = [0]
   let acc = 0
   for (let f = 1; f <= count; f++) {
-    const fw = Math.pow(FRET_SCALE, f - 1)
-    acc += fw
+    acc += Math.pow(FRET_SCALE, f - 1)
     w.push(acc)
   }
   return w
@@ -44,14 +42,7 @@ const KIND_COLOR: Record<string, string> = {
   scale: '#94a3b8',
 }
 
-export function Fretboard({
-  notes,
-  activeIdx = -1,
-  orientation = 'horizontal',
-  editorMode = false,
-  editorSelection,
-  onCellClick,
-}: Props) {
+export function Fretboard({ notes, activeIdx = -1, editorMode = false, editorSelection, onCellClick }: Props) {
   const { fretCount, zoom, fitToScreen, rootPc, scale, cagedShape, displayMode, showNoteNames, handedness } = useUi()
 
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -61,7 +52,7 @@ export function Fretboard({
     const update = () => {
       if (!wrapRef.current) return
       const rect = wrapRef.current.getBoundingClientRect()
-      setContainer({ w: Math.max(280, rect.width), h: Math.max(160, rect.height) })
+      setContainer({ w: Math.max(280, rect.width), h: Math.max(140, rect.height) })
     }
     update()
     const ro = new ResizeObserver(update)
@@ -73,45 +64,28 @@ export function Fretboard({
     }
   }, [])
 
-  const isHorizontal = orientation === 'horizontal'
   const widths = useMemo(() => cumulativeWidths(fretCount), [fretCount])
   const totalUnits = widths[fretCount]
 
-  // Geometry
-  const gutter = 26
-  const padBoard = 18 // vertical (or horizontal for vertical orient) padding for strings
-  const containerMain = isHorizontal ? container.w : container.h
-  const containerCross = isHorizontal ? container.h : container.w
-
-  // Base width per fret unit when fit-to-screen.
-  const availMain = Math.max(200, containerMain - gutter - 12)
-  const fitUnit = availMain / totalUnits
+  const gutter = 22
+  const padBoard = 14
+  const availW = Math.max(200, container.w - gutter - 12)
+  const fitUnit = availW / totalUnits
   const unit = fitToScreen ? fitUnit : Math.max(14, fitUnit * zoom)
+  const boardW = unit * totalUnits
+  const boardH = Math.max(100, container.h - padBoard * 2 - 12)
+  const stringGap = boardH / 5
 
-  const boardMain = unit * totalUnits
-  const boardCross = Math.max(120, containerCross - padBoard * 2 - 12)
-  const stringGap = boardCross / 5
+  const svgW = gutter + boardW + 10
+  const svgH = padBoard * 2 + boardH
 
-  // SVG canvas size.
-  const svgW = isHorizontal ? gutter + boardMain + 10 : padBoard * 2 + boardCross
-  const svgH = isHorizontal ? padBoard * 2 + boardCross : gutter + boardMain + 10
-
-  const mainAt = (f: number) => (widths[f] / totalUnits) * boardMain
+  const mainAt = (f: number) => (widths[f] / totalUnits) * boardW
   const centerAt = (f: number) => (mainAt(f) + mainAt(Math.max(0, f - 1))) / 2
 
-  // Helpers: given visual string index i=0..5, return actual string id per handedness.
-  // Strings: 1=high E, 6=low E. Right-handed horizontal = high E on top (i=0 → s=1).
   const visualStrings = handedness === 'left' ? [6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6]
+  const stringY = (s: number) => padBoard + stringGap * visualStrings.indexOf(s)
 
-  const stringCross = (s: number) => {
-    const i = visualStrings.indexOf(s)
-    return padBoard + stringGap * i
-  }
-
-  const isHighE = (s: number) => s === 1
-
-  // Note lookup for sequence mode.
-  const seqAt = useMemo(() => {
+  const seqSeen = useMemo(() => {
     const m = new Map<string, number>()
     notes.forEach((n, i) => {
       const key = `${n[0]}-${n[1]}`
@@ -120,16 +94,16 @@ export function Fretboard({
     return m
   }, [notes])
 
-  // Scale overlay positions.
   const overlay = useMemo(() => {
     if (editorMode) return []
     if (displayMode === 'sequence') return []
     const intervals = new Set(SCALES[scale].intervals)
-    const [cagedStart, cagedEnd] = displayMode === 'caged' ? cagedBoxRange(rootPc, cagedShape, fretCount) : [0, fretCount]
+    const [a, b] =
+      displayMode === 'caged' ? cagedBoxRange(rootPc, cagedShape, fretCount) : [0, fretCount]
     const out: { s: number; f: number; rel: number }[] = []
     for (let s = 1; s <= 6; s++) {
       for (let f = 0; f <= fretCount; f++) {
-        if (displayMode === 'caged' && (f < cagedStart || f > cagedEnd)) continue
+        if (displayMode === 'caged' && (f < a || f > b)) continue
         const rel = (((midiOf(s, f) % 12) - rootPc) % 12 + 12) % 12
         if (intervals.has(rel)) out.push({ s, f, rel })
       }
@@ -137,117 +111,57 @@ export function Fretboard({
     return out
   }, [editorMode, displayMode, scale, rootPc, cagedShape, fretCount])
 
-  // Cell click handler (editor or simple tap-to-play).
   const handleCell = (s: number, f: number) => {
     if (onCellClick) onCellClick(s, f)
     else playNoteAt(s, f)
   }
 
-  // Coordinate helpers.
-  // For horizontal: main axis = x (frets), cross axis = y (strings).
-  // For vertical: main axis = y (frets), cross axis = x (strings).
-  const fretLine = (f: number) => {
-    if (isHorizontal) {
-      return { x1: gutter + mainAt(f), y1: padBoard, x2: gutter + mainAt(f), y2: padBoard + boardCross }
-    }
-    return { x1: padBoard, y1: gutter + mainAt(f), x2: padBoard + boardCross, y2: gutter + mainAt(f) }
-  }
-
-  const stringLine = (s: number) => {
-    if (isHorizontal) {
-      return { x1: gutter, y1: stringCross(s), x2: gutter + boardMain, y2: stringCross(s) }
-    }
-    return { x1: stringCross(s), y1: gutter, x2: stringCross(s), y2: gutter + boardMain }
-  }
-
-  const notePos = (s: number, f: number) => {
-    const m = f === 0 ? mainAt(0) / 2 : centerAt(f)
-    if (isHorizontal) return { cx: gutter + m, cy: stringCross(s) }
-    return { cx: stringCross(s), cy: gutter + m }
-  }
+  const notePos = (s: number, f: number) => ({
+    cx: gutter + (f === 0 ? mainAt(0) / 2 : centerAt(f)),
+    cy: stringY(s),
+  })
 
   const cellRect = (s: number, f: number) => {
     const mStart = f === 0 ? 0 : mainAt(f - 1)
     const mEnd = mainAt(f)
-    const mW = Math.max(8, mEnd - mStart)
-    const cStart = stringCross(s) - stringGap / 2
-    const cW = stringGap
-    if (isHorizontal) return { x: gutter + mStart, y: cStart, width: mW, height: cW }
-    return { x: cStart, y: gutter + mStart, width: cW, height: mW }
+    return {
+      x: gutter + mStart,
+      y: stringY(s) - stringGap / 2,
+      width: Math.max(8, mEnd - mStart),
+      height: stringGap,
+    }
   }
 
-  const inlayPos = (f: number) => {
-    const m = centerAt(f)
-    if (isHorizontal) return { mainCoord: gutter + m, crossStart: padBoard, crossLen: boardCross }
-    return { mainCoord: gutter + m, crossStart: padBoard, crossLen: boardCross }
-  }
-
-  // Zoom scrolling: when fit is off, main axis may exceed container. Wrap scroll container accordingly.
-  const needsScroll = !fitToScreen && boardMain + gutter + 12 > containerMain
+  const needsScroll = !fitToScreen && svgW > container.w
 
   return (
-    <div
-      ref={wrapRef}
-      className="w-full h-full flex items-center justify-center"
-      style={{ minHeight: 160 }}
-    >
+    <div ref={wrapRef} className="w-full h-full flex items-stretch" style={{ minHeight: 120 }}>
       <div
         className="w-full h-full"
-        style={{
-          overflowX: needsScroll && isHorizontal ? 'auto' : 'hidden',
-          overflowY: needsScroll && !isHorizontal ? 'auto' : 'hidden',
-        }}
+        style={{ overflowX: needsScroll ? 'auto' : 'hidden', overflowY: 'hidden' }}
       >
-        <svg
-          width={svgW}
-          height={svgH}
-          viewBox={`0 0 ${svgW} ${svgH}`}
-          style={{ display: 'block' }}
-        >
+        <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: 'block' }}>
           <defs>
-            <linearGradient id="fb-flat" x1="0" y1="0" x2={isHorizontal ? '0' : '1'} y2={isHorizontal ? '1' : '0'}>
+            <linearGradient id="fb-flat" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#1e1e23" />
               <stop offset="100%" stopColor="#14141a" />
             </linearGradient>
           </defs>
 
-          {/* Board background */}
-          {isHorizontal ? (
-            <rect x={gutter} y={padBoard - 6} width={boardMain} height={boardCross + 12} fill="url(#fb-flat)" rx={6} />
-          ) : (
-            <rect x={padBoard - 6} y={gutter} width={boardCross + 12} height={boardMain} fill="url(#fb-flat)" rx={6} />
-          )}
+          <rect x={gutter} y={padBoard - 6} width={boardW} height={boardH + 12} fill="url(#fb-flat)" rx={6} />
 
-          {/* Fret numbers */}
+          {/* Fret numbers (compact) */}
           {Array.from({ length: fretCount + 1 }, (_, f) => {
-            if (f > 0 && !INLAYS.has(f) && !DOUBLE_INLAYS.has(f) && f % 12 !== 0) {
-              // Only label inlay positions and nut for less clutter
-            }
             const m = f === 0 ? mainAt(0) / 2 : centerAt(f)
-            if (isHorizontal) {
-              return (
-                <text
-                  key={`fn-${f}`}
-                  x={gutter + m}
-                  y={padBoard - 10}
-                  fill="#6b7280"
-                  fontSize={9}
-                  fontFamily="JetBrains Mono"
-                  textAnchor="middle"
-                >
-                  {f}
-                </text>
-              )
-            }
             return (
               <text
                 key={`fn-${f}`}
-                x={padBoard - 10}
-                y={gutter + m + 3}
+                x={gutter + m}
+                y={padBoard - 6}
                 fill="#6b7280"
                 fontSize={9}
                 fontFamily="JetBrains Mono"
-                textAnchor="end"
+                textAnchor="middle"
               >
                 {f}
               </text>
@@ -257,19 +171,15 @@ export function Fretboard({
           {/* Inlays */}
           {Array.from({ length: fretCount + 1 }, (_, f) => {
             if (!INLAYS.has(f) && !DOUBLE_INLAYS.has(f)) return null
-            const { mainCoord, crossStart, crossLen } = inlayPos(f)
+            const m = gutter + centerAt(f)
             const dots = DOUBLE_INLAYS.has(f)
-              ? [crossStart + crossLen * 0.3, crossStart + crossLen * 0.7]
-              : [crossStart + crossLen * 0.5]
+              ? [padBoard + boardH * 0.3, padBoard + boardH * 0.7]
+              : [padBoard + boardH * 0.5]
             return (
               <g key={`inlay-${f}`}>
-                {dots.map((d, i) =>
-                  isHorizontal ? (
-                    <circle key={i} cx={mainCoord} cy={d} r={3.5} fill="#3f3f46" />
-                  ) : (
-                    <circle key={i} cx={d} cy={mainCoord} r={3.5} fill="#3f3f46" />
-                  ),
-                )}
+                {dots.map((cy, i) => (
+                  <circle key={i} cx={m} cy={cy} r={3.5} fill="#3f3f46" />
+                ))}
               </g>
             )
           })}
@@ -279,24 +189,12 @@ export function Fretboard({
             const [a, b] = cagedBoxRange(rootPc, cagedShape, fretCount)
             const x1 = mainAt(Math.max(0, a - 1))
             const x2 = mainAt(b)
-            if (isHorizontal) {
-              return (
-                <rect
-                  x={gutter + x1}
-                  y={padBoard - 4}
-                  width={Math.max(0, x2 - x1)}
-                  height={boardCross + 8}
-                  fill="#fbbf24"
-                  opacity={0.08}
-                />
-              )
-            }
             return (
               <rect
-                x={padBoard - 4}
-                y={gutter + x1}
-                width={boardCross + 8}
-                height={Math.max(0, x2 - x1)}
+                x={gutter + x1}
+                y={padBoard - 4}
+                width={Math.max(0, x2 - x1)}
+                height={boardH + 8}
                 fill="#fbbf24"
                 opacity={0.08}
               />
@@ -304,48 +202,36 @@ export function Fretboard({
           })()}
 
           {/* Frets */}
-          {Array.from({ length: fretCount + 1 }, (_, f) => {
-            const { x1, y1, x2, y2 } = fretLine(f)
-            return (
-              <line
-                key={`fl-${f}`}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke={f === 0 ? '#e5e7eb' : '#52525b'}
-                strokeWidth={f === 0 ? 3 : 1}
-                opacity={f === 0 ? 1 : 0.7}
-              />
-            )
-          })}
+          {Array.from({ length: fretCount + 1 }, (_, f) => (
+            <line
+              key={`fl-${f}`}
+              x1={gutter + mainAt(f)}
+              y1={padBoard}
+              x2={gutter + mainAt(f)}
+              y2={padBoard + boardH}
+              stroke={f === 0 ? '#e5e7eb' : '#52525b'}
+              strokeWidth={f === 0 ? 3 : 1}
+              opacity={f === 0 ? 1 : 0.7}
+            />
+          ))}
 
           {/* Strings */}
-          {visualStrings.map((s) => {
-            const { x1, y1, x2, y2 } = stringLine(s)
-            const thickness = isHighE(s) ? 0.9 : 0.8 + (s - 1) * 0.22
-            return (
-              <g key={`s-${s}`}>
-                {isHorizontal ? (
-                  <text x={4} y={stringCross(s) + 3} fill="#9ca3af" fontSize={10} fontFamily="JetBrains Mono">
-                    {['E', 'B', 'G', 'D', 'A', 'E'][s - 1]}
-                  </text>
-                ) : (
-                  <text
-                    x={stringCross(s)}
-                    y={gutter - 8}
-                    fill="#9ca3af"
-                    fontSize={10}
-                    fontFamily="JetBrains Mono"
-                    textAnchor="middle"
-                  >
-                    {['E', 'B', 'G', 'D', 'A', 'E'][s - 1]}
-                  </text>
-                )}
-                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#d1d5db" strokeWidth={thickness} opacity={0.8} />
-              </g>
-            )
-          })}
+          {visualStrings.map((s) => (
+            <g key={`s-${s}`}>
+              <text x={4} y={stringY(s) + 3} fill="#9ca3af" fontSize={10} fontFamily="JetBrains Mono">
+                {['E', 'B', 'G', 'D', 'A', 'E'][s - 1]}
+              </text>
+              <line
+                x1={gutter}
+                y1={stringY(s)}
+                x2={gutter + boardW}
+                y2={stringY(s)}
+                stroke="#d1d5db"
+                strokeWidth={0.8 + (s - 1) * 0.22}
+                opacity={0.8}
+              />
+            </g>
+          ))}
 
           {/* Tap zones */}
           {visualStrings.map((s) =>
@@ -366,7 +252,7 @@ export function Fretboard({
             }),
           )}
 
-          {/* Scale overlay (all / degrees / caged) */}
+          {/* Scale overlay */}
           {overlay.map(({ s, f, rel }) => {
             const { cx, cy } = notePos(s, f)
             const kind = highlightKindForInterval(rel)
@@ -394,7 +280,7 @@ export function Fretboard({
             )
           })}
 
-          {/* Editor selection markers */}
+          {/* Editor selection */}
           {editorMode &&
             editorSelection &&
             [...editorSelection].map((key) => {
@@ -420,7 +306,7 @@ export function Fretboard({
               )
             })}
 
-          {/* Sequence notes (catalog playback or 'sequence' mode) */}
+          {/* Sequence notes */}
           {displayMode === 'sequence' && !editorMode &&
             notes.map((n, i) => {
               const [s, f] = n
@@ -449,41 +335,26 @@ export function Fretboard({
               )
             })}
 
-          {/* Sequence markers on top of scale overlay when not in sequence mode */}
-          {displayMode !== 'sequence' && !editorMode &&
-            activeIdx >= 0 && notes[activeIdx] && (() => {
-              const [s, f] = notes[activeIdx]
-              const { cx, cy } = notePos(s, f)
-              return (
-                <g pointerEvents="none">
-                  <circle cx={cx} cy={cy} r={14} fill="#fbbf24" opacity={0.45} />
-                  <circle cx={cx} cy={cy} r={10} fill="#fbbf24" stroke="#0a0a0a" strokeWidth={1.5} />
-                </g>
-              )
-            })()}
+          {/* Active marker in non-sequence modes */}
+          {displayMode !== 'sequence' && !editorMode && activeIdx >= 0 && notes[activeIdx] && (() => {
+            const [s, f] = notes[activeIdx]
+            const { cx, cy } = notePos(s, f)
+            return (
+              <g pointerEvents="none">
+                <circle cx={cx} cy={cy} r={14} fill="#fbbf24" opacity={0.45} />
+                <circle cx={cx} cy={cy} r={10} fill="#fbbf24" stroke="#0a0a0a" strokeWidth={1.5} />
+              </g>
+            )
+          })()}
 
-          {/* Sequence path trail in non-sequence modes: small numbered dots along sequence */}
-          {displayMode !== 'sequence' && !editorMode &&
-            notes.length > 0 && (() => {
-              const seen = new Set<string>()
-              return notes.map((n, i) => {
-                const key = `${n[0]}-${n[1]}`
-                if (seen.has(key)) return null
-                seen.add(key)
-                if (seqAt.get(key) !== i) return null
-                const { cx, cy } = notePos(n[0], n[1])
-                return (
-                  <circle
-                    key={`seq-${i}`}
-                    cx={cx}
-                    cy={cy - 14}
-                    r={3}
-                    fill="#fbbf24"
-                    pointerEvents="none"
-                  />
-                )
-              })
-            })()}
+          {/* Path trail dots */}
+          {displayMode !== 'sequence' && !editorMode && notes.length > 0 &&
+            notes.map((n, i) => {
+              const key = `${n[0]}-${n[1]}`
+              if (seqSeen.get(key) !== i) return null
+              const { cx, cy } = notePos(n[0], n[1])
+              return <circle key={`seq-${i}`} cx={cx} cy={cy - 12} r={2.5} fill="#fbbf24" pointerEvents="none" />
+            })}
         </svg>
       </div>
     </div>

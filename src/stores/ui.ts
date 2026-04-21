@@ -15,6 +15,9 @@ type UiState = {
   cagedShape: 'C' | 'A' | 'G' | 'E' | 'D'
   handedness: Handedness
   showNoteNames: boolean
+  sidebarCollapsed: boolean
+  controlsCollapsed: boolean
+  expandedView: boolean
 
   setDisplayMode: (m: DisplayMode) => void
   setFretCount: (n: FretCount) => void
@@ -25,6 +28,9 @@ type UiState = {
   setCagedShape: (s: 'C' | 'A' | 'G' | 'E' | 'D') => void
   setHandedness: (h: Handedness) => void
   setShowNoteNames: (b: boolean) => void
+  setSidebarCollapsed: (b: boolean) => void
+  setControlsCollapsed: (b: boolean) => void
+  setExpandedView: (b: boolean) => void
 }
 
 const KEY = 'jfb.ui.v1'
@@ -40,10 +46,16 @@ const load = (): Partial<UiState> => {
 const persist = (s: UiState) => {
   if (typeof localStorage === 'undefined') return
   try {
-    const { displayMode, fretCount, zoom, fitToScreen, rootPc, scale, cagedShape, handedness, showNoteNames } = s
+    const {
+      displayMode, fretCount, zoom, fitToScreen, rootPc, scale, cagedShape, handedness, showNoteNames,
+      sidebarCollapsed, controlsCollapsed, expandedView,
+    } = s
     localStorage.setItem(
       KEY,
-      JSON.stringify({ displayMode, fretCount, zoom, fitToScreen, rootPc, scale, cagedShape, handedness, showNoteNames }),
+      JSON.stringify({
+        displayMode, fretCount, zoom, fitToScreen, rootPc, scale, cagedShape, handedness, showNoteNames,
+        sidebarCollapsed, controlsCollapsed, expandedView,
+      }),
     )
   } catch {
     // ignore quota errors
@@ -62,6 +74,9 @@ export const useUi = create<UiState>((set, get) => ({
   cagedShape: (initial.cagedShape as 'C' | 'A' | 'G' | 'E' | 'D') ?? 'E',
   handedness: (initial.handedness as Handedness) ?? 'right',
   showNoteNames: initial.showNoteNames ?? true,
+  sidebarCollapsed: initial.sidebarCollapsed ?? false,
+  controlsCollapsed: initial.controlsCollapsed ?? false,
+  expandedView: initial.expandedView ?? false,
 
   setDisplayMode: (displayMode) => { set({ displayMode }); persist(get()) },
   setFretCount: (fretCount) => { set({ fretCount }); persist(get()) },
@@ -72,4 +87,7 @@ export const useUi = create<UiState>((set, get) => ({
   setCagedShape: (cagedShape) => { set({ cagedShape }); persist(get()) },
   setHandedness: (handedness) => { set({ handedness }); persist(get()) },
   setShowNoteNames: (showNoteNames) => { set({ showNoteNames }); persist(get()) },
+  setSidebarCollapsed: (sidebarCollapsed) => { set({ sidebarCollapsed }); persist(get()) },
+  setControlsCollapsed: (controlsCollapsed) => { set({ controlsCollapsed }); persist(get()) },
+  setExpandedView: (expandedView) => { set({ expandedView }); persist(get()) },
 }))
