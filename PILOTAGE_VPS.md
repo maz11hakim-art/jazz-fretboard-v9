@@ -110,6 +110,8 @@ Tous les projets sur le VPS = repo privé `github.com/maz11hakim-art/<nom>`.
 
 - **`claude-init-project <nom>`** : init git + .gitignore standard + crée repo privé + 1er push
 - **`claude-auto-push`** : commit `chore: auto-snapshot <iso>` + push, appelé par hook Stop
+- **`claude-sessions`** : liste les sessions Remote Control actives (root + claudeuser) avec leur URL
+- **`sync-pilotage-doc`** : copie `/usr/local/share/claude-vps/PILOTAGE_VPS.md` dans tous les projets, commit + push auto
 
 ### .gitignore standard (créé auto)
 
