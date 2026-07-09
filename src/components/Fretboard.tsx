@@ -1,55 +1,58 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { NoteTuple } from '../lib/notes'
-import { nameAt } from '../lib/notes'
+import { nameAt, midiOf } from '../lib/notes'
 import { playNoteAt } from '../audio/sampler'
+import { useUi } from '../stores/ui'
+import {
+  SCALES,
+  degreeLabel,
+  cagedBoxRange,
+  highlightKindForInterval,
+} from '../lib/scales'
 
 type Props = {
   notes: NoteTuple[]
   activeIdx?: number
-  frets?: number
-  orientation?: 'horizontal' | 'vertical'
-  showNoteNames?: boolean
+  editorMode?: boolean
+  editorSelection?: Set<string>
+  onCellClick?: (string: number, fret: number) => void
 }
 
 const INLAYS = new Set([3, 5, 7, 9, 15, 17, 19, 21])
 const DOUBLE_INLAYS = new Set([12, 24])
 
-// Classic Fender-like fret spacing (exponential)
+// Classic exponential fret spacing.
 const FRET_SCALE = 0.943874
 const cumulativeWidths = (count: number) => {
-  const w: number[] = []
+  const w: number[] = [0]
   let acc = 0
-  for (let f = 0; f <= count; f++) {
-    const fw = f === 0 ? 1.2 : Math.pow(FRET_SCALE, f - 1)
-    acc += fw
+  for (let f = 1; f <= count; f++) {
+    acc += Math.pow(FRET_SCALE, f - 1)
     w.push(acc)
   }
   return w
 }
 
-// Map note tuple index → color by position in sequence.
-const PLAY_COLORS = ['#eab308', '#f59e0b', '#ef4444', '#ec4899', '#a855f7', '#3b82f6', '#06b6d4', '#22c55e']
-const colorForIdx = (i: number) => PLAY_COLORS[i % PLAY_COLORS.length]
+const SEQUENCE_COLORS = ['#fbbf24', '#fb923c', '#f87171', '#f472b6', '#c084fc', '#818cf8', '#38bdf8', '#4ade80']
+const KIND_COLOR: Record<string, string> = {
+  root: '#ef4444',
+  third: '#22c55e',
+  fifth: '#3b82f6',
+  seventh: '#a855f7',
+  scale: '#94a3b8',
+}
 
-export function Fretboard({
-  notes,
-  activeIdx = -1,
-  frets = 15,
-  orientation = 'horizontal',
-  showNoteNames = false,
-}: Props) {
+export function Fretboard({ notes, activeIdx = -1, editorMode = false, editorSelection, onCellClick }: Props) {
+  const { fretCount, zoom, fitToScreen, rootPc, scale, cagedShape, displayMode, showNoteNames, handedness } = useUi()
+
   const wrapRef = useRef<HTMLDivElement>(null)
-  const [size, setSize] = useState({ w: 700, h: 180 })
+  const [container, setContainer] = useState({ w: 800, h: 260 })
 
   useEffect(() => {
     const update = () => {
       if (!wrapRef.current) return
       const rect = wrapRef.current.getBoundingClientRect()
-      if (orientation === 'horizontal') {
-        setSize({ w: Math.max(320, rect.width - 8), h: Math.min(220, Math.max(140, rect.height || 200)) })
-      } else {
-        setSize({ w: Math.min(320, Math.max(220, rect.width || 280)), h: Math.max(400, rect.height - 8) })
-      }
+      setContainer({ w: Math.max(280, rect.width), h: Math.max(140, rect.height) })
     }
     update()
     const ro = new ResizeObserver(update)
@@ -59,296 +62,341 @@ export function Fretboard({
       ro.disconnect()
       window.removeEventListener('resize', update)
     }
-  }, [orientation])
+  }, [])
 
-  const strings = [1, 2, 3, 4, 5, 6]
-  const widths = cumulativeWidths(frets)
-  const totalUnits = widths[frets]
+  const widths = useMemo(() => cumulativeWidths(fretCount), [fretCount])
+  const totalUnits = widths[fretCount]
 
-  // Layout
-  const pad = 22 // label column
-  const boardWidth = orientation === 'horizontal' ? size.w - pad - 8 : size.h - pad - 8
-  const stringSpan = orientation === 'horizontal' ? size.h - 28 : size.w - 28
-  const stringGap = stringSpan / 5
-  const xOf = (f: number) => (widths[f] / totalUnits) * boardWidth
-  const centerOf = (f: number) => (xOf(f) + xOf(Math.max(0, f - 1))) / 2
+  const gutter = 22
+  const padBoard = 14
+  const availW = Math.max(200, container.w - gutter - 12)
+  const fitUnit = availW / totalUnits
+  const unit = fitToScreen ? fitUnit : Math.max(14, fitUnit * zoom)
+  const boardW = unit * totalUnits
+  const boardH = Math.max(100, container.h - padBoard * 2 - 12)
+  const stringGap = boardH / 5
 
-  // Build note lookup
-  const noteAtPos = new Map<string, { n: NoteTuple; idx: number }>()
-  notes.forEach((n, i) => {
-    const key = `${n[0]}-${n[1]}`
-    if (!noteAtPos.has(key)) noteAtPos.set(key, { n, idx: i })
-  })
+  const svgW = gutter + boardW + 10
+  const svgH = padBoard * 2 + boardH
 
-  const isActive = (i: number) => i === activeIdx
-  const wasPlayed = (i: number) => activeIdx >= 0 && i < activeIdx
+  const mainAt = (f: number) => (widths[f] / totalUnits) * boardW
+  const centerAt = (f: number) => (mainAt(f) + mainAt(Math.max(0, f - 1))) / 2
 
-  // SVG horizontal layout: strings are horizontal rows, frets are vertical columns
-  // Vertical layout: strings are vertical columns, frets are horizontal rows (transpose)
-  const H = size.h
-  const W = size.w
+  const visualStrings = handedness === 'left' ? [6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6]
+  const stringY = (s: number) => padBoard + stringGap * visualStrings.indexOf(s)
 
-  const renderHorizontal = () => (
-    <svg
-      width={W}
-      height={H}
-      viewBox={`0 0 ${W} ${H}`}
-      style={{ display: 'block' }}
-    >
-      {/* Background wood */}
-      <defs>
-        <linearGradient id="fb-wood" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3b2415" />
-          <stop offset="50%" stopColor="#4d2f1d" />
-          <stop offset="100%" stopColor="#2e1b10" />
-        </linearGradient>
-      </defs>
-      <rect x={pad} y={14} width={boardWidth} height={stringSpan} fill="url(#fb-wood)" rx={4} />
+  const seqSeen = useMemo(() => {
+    const m = new Map<string, number>()
+    notes.forEach((n, i) => {
+      const key = `${n[0]}-${n[1]}`
+      if (!m.has(key)) m.set(key, i)
+    })
+    return m
+  }, [notes])
 
-      {/* Fret numbers */}
-      {Array.from({ length: frets + 1 }, (_, f) => (
-        <text
-          key={`fn-${f}`}
-          x={pad + (f === 0 ? xOf(0) / 2 : centerOf(f))}
-          y={10}
-          fill="#a3a3a3"
-          fontSize={9}
-          fontFamily="JetBrains Mono"
-          textAnchor="middle"
-        >
-          {f}
-        </text>
-      ))}
+  const overlay = useMemo(() => {
+    if (editorMode) return []
+    if (displayMode === 'sequence') return []
+    const intervals = new Set(SCALES[scale].intervals)
+    const [a, b] =
+      displayMode === 'caged' ? cagedBoxRange(rootPc, cagedShape, fretCount) : [0, fretCount]
+    const out: { s: number; f: number; rel: number }[] = []
+    for (let s = 1; s <= 6; s++) {
+      for (let f = 0; f <= fretCount; f++) {
+        if (displayMode === 'caged' && (f < a || f > b)) continue
+        const rel = (((midiOf(s, f) % 12) - rootPc) % 12 + 12) % 12
+        if (intervals.has(rel)) out.push({ s, f, rel })
+      }
+    }
+    return out
+  }, [editorMode, displayMode, scale, rootPc, cagedShape, fretCount])
 
-      {/* Inlays */}
-      {Array.from({ length: frets + 1 }, (_, f) => {
-        if (!INLAYS.has(f) && !DOUBLE_INLAYS.has(f)) return null
-        const x = pad + centerOf(f)
-        if (DOUBLE_INLAYS.has(f)) {
-          return (
-            <g key={`inlay-${f}`}>
-              <circle cx={x} cy={14 + stringGap * 1.3} r={3} fill="#d4a574" opacity={0.55} />
-              <circle cx={x} cy={14 + stringGap * 3.7} r={3} fill="#d4a574" opacity={0.55} />
-            </g>
-          )
-        }
-        return <circle key={`inlay-${f}`} cx={x} cy={14 + stringGap * 2.5} r={3} fill="#d4a574" opacity={0.4} />
-      })}
-
-      {/* Frets (vertical lines) */}
-      {Array.from({ length: frets + 1 }, (_, f) => (
-        <line
-          key={`fl-${f}`}
-          x1={pad + xOf(f)}
-          y1={14}
-          x2={pad + xOf(f)}
-          y2={14 + stringSpan}
-          stroke={f === 0 ? '#f5f5f5' : '#8a8a8a'}
-          strokeWidth={f === 0 ? 3 : 1.5}
-        />
-      ))}
-
-      {/* Strings (horizontal lines) */}
-      {strings.map((s, i) => {
-        const y = 14 + stringGap * i
-        const thickness = 1 + (s - 1) * 0.25
-        return (
-          <g key={`s-${s}`}>
-            <text x={4} y={y + 3} fill="#a3a3a3" fontSize={10} fontFamily="JetBrains Mono">
-              {['E', 'B', 'G', 'D', 'A', 'E'][s - 1]}
-            </text>
-            <line
-              x1={pad}
-              y1={y}
-              x2={pad + boardWidth}
-              y2={y}
-              stroke="#d4d4d4"
-              strokeWidth={thickness}
-              opacity={0.85}
-            />
-          </g>
-        )
-      })}
-
-      {/* Fret cells (invisible tap zones) */}
-      {strings.map((s) =>
-        Array.from({ length: frets + 1 }, (_, f) => (
-          <rect
-            key={`cell-${s}-${f}`}
-            x={pad + (f === 0 ? 0 : xOf(f - 1))}
-            y={14 + stringGap * (s - 1) - stringGap / 2}
-            width={f === 0 ? xOf(0) : xOf(f) - xOf(f - 1)}
-            height={stringGap}
-            fill="transparent"
-            style={{ cursor: 'pointer' }}
-            onClick={() => playNoteAt(s, f)}
-          />
-        )),
-      )}
-
-      {/* Notes */}
-      {notes.map((n, i) => {
-        const [s, f] = n
-        const cx = pad + (f === 0 ? xOf(0) / 2 : centerOf(f))
-        const cy = 14 + stringGap * (s - 1)
-        const active = isActive(i)
-        const played = wasPlayed(i)
-        const r = active ? 12 : 9
-        const opacity = active ? 1 : played ? 0.25 : 0.85
-        return (
-          <g key={`n-${i}`} opacity={opacity} style={{ transition: 'opacity .15s' }}>
-            {active && <circle cx={cx} cy={cy} r={r + 6} fill={colorForIdx(i)} opacity={0.25} />}
-            <circle cx={cx} cy={cy} r={r} fill={colorForIdx(i)} stroke="#0a0a0a" strokeWidth={1.5} />
-            <text
-              x={cx}
-              y={cy + 3}
-              fill="#0a0a0a"
-              fontSize={9}
-              fontWeight={700}
-              fontFamily="JetBrains Mono"
-              textAnchor="middle"
-              pointerEvents="none"
-            >
-              {showNoteNames ? nameAt(s, f) : i + 1}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
+  // Notes currently sounding: every note sharing the same beat as activeIdx.
+  // Handles chords/voicings where several notes strike simultaneously.
+  const activeKeys = useMemo(() => {
+    if (activeIdx < 0 || !notes[activeIdx]) return new Set<string>()
+    const beat = notes[activeIdx][2]
+    return new Set(notes.filter((n) => n[2] === beat).map((n) => `${n[0]}-${n[1]}`))
+  }, [notes, activeIdx])
+  const playbackActive = activeIdx >= 0 && activeKeys.size > 0
+  const overlaySet = useMemo(
+    () => new Set(overlay.map((o) => `${o.s}-${o.f}`)),
+    [overlay],
   )
 
-  // Vertical: frets horizontal, strings vertical
-  const renderVertical = () => {
-    const innerH = H - pad - 8
-    const innerW = W - 28
-    const boardH = innerH
-    const stringGapV = innerW / 5
-    const xStr = (s: number) => 14 + stringGapV * (s - 1)
-    const yFret = (f: number) => pad + (widths[f] / totalUnits) * boardH
-    const yCenter = (f: number) => (yFret(f) + yFret(Math.max(0, f - 1))) / 2
-
-    return (
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
-        <defs>
-          <linearGradient id="fb-wood-v" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#3b2415" />
-            <stop offset="50%" stopColor="#4d2f1d" />
-            <stop offset="100%" stopColor="#2e1b10" />
-          </linearGradient>
-        </defs>
-        <rect x={14 - 4} y={pad} width={innerW + 8} height={boardH} fill="url(#fb-wood-v)" rx={4} />
-
-        {/* Fret numbers (left gutter) */}
-        {Array.from({ length: frets + 1 }, (_, f) => (
-          <text
-            key={`fn-v-${f}`}
-            x={2}
-            y={(f === 0 ? pad + 8 : yCenter(f)) + 3}
-            fill="#a3a3a3"
-            fontSize={9}
-            fontFamily="JetBrains Mono"
-          >
-            {f}
-          </text>
-        ))}
-
-        {/* Inlays */}
-        {Array.from({ length: frets + 1 }, (_, f) => {
-          if (!INLAYS.has(f) && !DOUBLE_INLAYS.has(f)) return null
-          const y = yCenter(f)
-          if (DOUBLE_INLAYS.has(f)) {
-            return (
-              <g key={`inlay-v-${f}`}>
-                <circle cx={14 + stringGapV * 1.3} cy={y} r={3} fill="#d4a574" opacity={0.55} />
-                <circle cx={14 + stringGapV * 3.7} cy={y} r={3} fill="#d4a574" opacity={0.55} />
-              </g>
-            )
-          }
-          return <circle key={`inlay-v-${f}`} cx={14 + stringGapV * 2.5} cy={y} r={3} fill="#d4a574" opacity={0.4} />
-        })}
-
-        {/* Frets (horizontal lines) */}
-        {Array.from({ length: frets + 1 }, (_, f) => (
-          <line
-            key={`fl-v-${f}`}
-            x1={14}
-            y1={yFret(f)}
-            x2={14 + innerW}
-            y2={yFret(f)}
-            stroke={f === 0 ? '#f5f5f5' : '#8a8a8a'}
-            strokeWidth={f === 0 ? 3 : 1.5}
-          />
-        ))}
-
-        {/* Strings (vertical lines) */}
-        {strings.map((s) => {
-          const x = xStr(s)
-          const thickness = 1 + (s - 1) * 0.25
-          return (
-            <g key={`s-v-${s}`}>
-              <text x={x - 3} y={pad - 4} fill="#a3a3a3" fontSize={10} fontFamily="JetBrains Mono">
-                {['E', 'B', 'G', 'D', 'A', 'E'][s - 1]}
-              </text>
-              <line x1={x} y1={pad} x2={x} y2={pad + boardH} stroke="#d4d4d4" strokeWidth={thickness} opacity={0.85} />
-            </g>
-          )
-        })}
-
-        {/* Tap zones */}
-        {strings.map((s) =>
-          Array.from({ length: frets + 1 }, (_, f) => (
-            <rect
-              key={`cell-v-${s}-${f}`}
-              x={xStr(s) - stringGapV / 2}
-              y={f === 0 ? pad : yFret(f - 1)}
-              width={stringGapV}
-              height={f === 0 ? yFret(0) - pad : yFret(f) - yFret(f - 1)}
-              fill="transparent"
-              style={{ cursor: 'pointer' }}
-              onClick={() => playNoteAt(s, f)}
-            />
-          )),
-        )}
-
-        {/* Notes */}
-        {notes.map((n, i) => {
-          const [s, f] = n
-          const cx = xStr(s)
-          const cy = f === 0 ? pad + 8 : yCenter(f)
-          const active = isActive(i)
-          const played = wasPlayed(i)
-          const r = active ? 12 : 9
-          const opacity = active ? 1 : played ? 0.25 : 0.85
-          return (
-            <g key={`n-v-${i}`} opacity={opacity} style={{ transition: 'opacity .15s' }}>
-              {active && <circle cx={cx} cy={cy} r={r + 6} fill={colorForIdx(i)} opacity={0.25} />}
-              <circle cx={cx} cy={cy} r={r} fill={colorForIdx(i)} stroke="#0a0a0a" strokeWidth={1.5} />
-              <text
-                x={cx}
-                y={cy + 3}
-                fill="#0a0a0a"
-                fontSize={9}
-                fontWeight={700}
-                fontFamily="JetBrains Mono"
-                textAnchor="middle"
-                pointerEvents="none"
-              >
-                {showNoteNames ? nameAt(s, f) : i + 1}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
-    )
+  const handleCell = (s: number, f: number) => {
+    if (onCellClick) onCellClick(s, f)
+    else playNoteAt(s, f)
   }
 
+  const notePos = (s: number, f: number) => ({
+    cx: gutter + (f === 0 ? mainAt(0) / 2 : centerAt(f)),
+    cy: stringY(s),
+  })
+
+  const cellRect = (s: number, f: number) => {
+    const mStart = f === 0 ? 0 : mainAt(f - 1)
+    const mEnd = mainAt(f)
+    return {
+      x: gutter + mStart,
+      y: stringY(s) - stringGap / 2,
+      width: Math.max(8, mEnd - mStart),
+      height: stringGap,
+    }
+  }
+
+  const needsScroll = !fitToScreen && svgW > container.w
+
   return (
-    <div
-      ref={wrapRef}
-      className="w-full h-full flex items-center justify-center"
-      style={{ minHeight: orientation === 'horizontal' ? 180 : 420 }}
-    >
-      {orientation === 'horizontal' ? renderHorizontal() : renderVertical()}
+    <div ref={wrapRef} className="w-full h-full flex items-stretch" style={{ minHeight: 120 }}>
+      <div
+        className="w-full h-full"
+        style={{ overflowX: needsScroll ? 'auto' : 'hidden', overflowY: 'hidden' }}
+      >
+        <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: 'block' }}>
+          <defs>
+            <linearGradient id="fb-flat" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1e1e23" />
+              <stop offset="100%" stopColor="#14141a" />
+            </linearGradient>
+          </defs>
+
+          <rect x={gutter} y={padBoard - 6} width={boardW} height={boardH + 12} fill="url(#fb-flat)" rx={6} />
+
+          {/* Fret numbers (compact) */}
+          {Array.from({ length: fretCount + 1 }, (_, f) => {
+            const m = f === 0 ? mainAt(0) / 2 : centerAt(f)
+            return (
+              <text
+                key={`fn-${f}`}
+                x={gutter + m}
+                y={padBoard - 6}
+                fill="#6b7280"
+                fontSize={9}
+                fontFamily="JetBrains Mono"
+                textAnchor="middle"
+              >
+                {f}
+              </text>
+            )
+          })}
+
+          {/* Inlays */}
+          {Array.from({ length: fretCount + 1 }, (_, f) => {
+            if (!INLAYS.has(f) && !DOUBLE_INLAYS.has(f)) return null
+            const m = gutter + centerAt(f)
+            const dots = DOUBLE_INLAYS.has(f)
+              ? [padBoard + boardH * 0.3, padBoard + boardH * 0.7]
+              : [padBoard + boardH * 0.5]
+            return (
+              <g key={`inlay-${f}`}>
+                {dots.map((cy, i) => (
+                  <circle key={i} cx={m} cy={cy} r={3.5} fill="#3f3f46" />
+                ))}
+              </g>
+            )
+          })}
+
+          {/* CAGED box shading */}
+          {displayMode === 'caged' && !editorMode && (() => {
+            const [a, b] = cagedBoxRange(rootPc, cagedShape, fretCount)
+            const x1 = mainAt(Math.max(0, a - 1))
+            const x2 = mainAt(b)
+            return (
+              <rect
+                x={gutter + x1}
+                y={padBoard - 4}
+                width={Math.max(0, x2 - x1)}
+                height={boardH + 8}
+                fill="#fbbf24"
+                opacity={0.08}
+              />
+            )
+          })()}
+
+          {/* Frets */}
+          {Array.from({ length: fretCount + 1 }, (_, f) => (
+            <line
+              key={`fl-${f}`}
+              x1={gutter + mainAt(f)}
+              y1={padBoard}
+              x2={gutter + mainAt(f)}
+              y2={padBoard + boardH}
+              stroke={f === 0 ? '#e5e7eb' : '#52525b'}
+              strokeWidth={f === 0 ? 3 : 1}
+              opacity={f === 0 ? 1 : 0.7}
+            />
+          ))}
+
+          {/* Strings */}
+          {visualStrings.map((s) => (
+            <g key={`s-${s}`}>
+              <text x={4} y={stringY(s) + 3} fill="#9ca3af" fontSize={10} fontFamily="JetBrains Mono">
+                {['E', 'B', 'G', 'D', 'A', 'E'][s - 1]}
+              </text>
+              <line
+                x1={gutter}
+                y1={stringY(s)}
+                x2={gutter + boardW}
+                y2={stringY(s)}
+                stroke="#d1d5db"
+                strokeWidth={0.8 + (s - 1) * 0.22}
+                opacity={0.8}
+              />
+            </g>
+          ))}
+
+          {/* Tap zones */}
+          {visualStrings.map((s) =>
+            Array.from({ length: fretCount + 1 }, (_, f) => {
+              const r = cellRect(s, f)
+              return (
+                <rect
+                  key={`cell-${s}-${f}`}
+                  x={r.x}
+                  y={r.y}
+                  width={r.width}
+                  height={r.height}
+                  fill="transparent"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleCell(s, f)}
+                />
+              )
+            }),
+          )}
+
+          {/* Scale overlay */}
+          {overlay.map(({ s, f, rel }) => {
+            const { cx, cy } = notePos(s, f)
+            const kind = highlightKindForInterval(rel)
+            const color = KIND_COLOR[kind]
+            const isRoot = kind === 'root'
+            const key = `${s}-${f}`
+            const isActive = activeKeys.has(key)
+            const groupOpacity = playbackActive ? (isActive ? 1 : 0.2) : 0.95
+            const r = isActive ? 11 : isRoot ? 10 : 8
+            const label = displayMode === 'degrees' ? degreeLabel(rel) : nameAt(s, f)
+            return (
+              <g
+                key={`ov-${s}-${f}`}
+                opacity={groupOpacity}
+                style={{ transition: 'opacity .12s' }}
+                pointerEvents="none"
+              >
+                {isActive && <circle cx={cx} cy={cy} r={r + 6} fill={color} opacity={0.35} />}
+                <circle cx={cx} cy={cy} r={r} fill={color} stroke="#0a0a0a" strokeWidth={isRoot || isActive ? 1.5 : 1} />
+                {showNoteNames && (
+                  <text
+                    x={cx}
+                    y={cy + 3}
+                    fill="#0a0a0a"
+                    fontSize={isRoot || isActive ? 9 : 8}
+                    fontWeight={700}
+                    fontFamily="JetBrains Mono"
+                    textAnchor="middle"
+                  >
+                    {label}
+                  </text>
+                )}
+              </g>
+            )
+          })}
+
+          {/* Editor selection */}
+          {editorMode &&
+            editorSelection &&
+            [...editorSelection].map((key) => {
+              const [sStr, fStr] = key.split('-')
+              const s = parseInt(sStr, 10)
+              const f = parseInt(fStr, 10)
+              const { cx, cy } = notePos(s, f)
+              return (
+                <g key={`sel-${key}`} pointerEvents="none">
+                  <circle cx={cx} cy={cy} r={11} fill="#22c55e" opacity={0.85} stroke="#0a0a0a" strokeWidth={1.5} />
+                  <text
+                    x={cx}
+                    y={cy + 3}
+                    fill="#0a0a0a"
+                    fontSize={9}
+                    fontWeight={700}
+                    fontFamily="JetBrains Mono"
+                    textAnchor="middle"
+                  >
+                    {nameAt(s, f)}
+                  </text>
+                </g>
+              )
+            })}
+
+          {/* Sequence notes */}
+          {displayMode === 'sequence' && !editorMode &&
+            notes.map((n, i) => {
+              const [s, f] = n
+              const { cx, cy } = notePos(s, f)
+              const active = i === activeIdx
+              const played = activeIdx >= 0 && i < activeIdx
+              const baseColor = SEQUENCE_COLORS[i % SEQUENCE_COLORS.length]
+              const r = active ? 12 : 9
+              const opacity = active ? 1 : played ? 0.28 : 0.9
+              return (
+                <g key={`n-${i}`} opacity={opacity} style={{ transition: 'opacity .15s' }} pointerEvents="none">
+                  {active && <circle cx={cx} cy={cy} r={r + 7} fill={baseColor} opacity={0.3} />}
+                  <circle cx={cx} cy={cy} r={r} fill={baseColor} stroke="#0a0a0a" strokeWidth={1.4} />
+                  <text
+                    x={cx}
+                    y={cy + 3}
+                    fill="#0a0a0a"
+                    fontSize={9}
+                    fontWeight={700}
+                    fontFamily="JetBrains Mono"
+                    textAnchor="middle"
+                  >
+                    {showNoteNames ? nameAt(s, f) : i + 1}
+                  </text>
+                </g>
+              )
+            })}
+
+          {/* Fallback active markers in non-sequence modes: highlight notes played
+              but absent from the scale overlay (e.g. chromatic passing tones). */}
+          {displayMode !== 'sequence' && !editorMode && playbackActive &&
+            [...activeKeys].map((key) => {
+              if (overlaySet.has(key)) return null
+              const [sStr, fStr] = key.split('-')
+              const s = parseInt(sStr, 10)
+              const f = parseInt(fStr, 10)
+              const { cx, cy } = notePos(s, f)
+              return (
+                <g key={`fb-${key}`} pointerEvents="none">
+                  <circle cx={cx} cy={cy} r={14} fill="#fbbf24" opacity={0.4} />
+                  <circle cx={cx} cy={cy} r={10} fill="#fbbf24" stroke="#0a0a0a" strokeWidth={1.5} />
+                  {showNoteNames && (
+                    <text
+                      x={cx}
+                      y={cy + 3}
+                      fill="#0a0a0a"
+                      fontSize={9}
+                      fontWeight={700}
+                      fontFamily="JetBrains Mono"
+                      textAnchor="middle"
+                    >
+                      {nameAt(s, f)}
+                    </text>
+                  )}
+                </g>
+              )
+            })}
+
+          {/* Path trail dots */}
+          {displayMode !== 'sequence' && !editorMode && notes.length > 0 &&
+            notes.map((n, i) => {
+              const key = `${n[0]}-${n[1]}`
+              if (seqSeen.get(key) !== i) return null
+              const { cx, cy } = notePos(n[0], n[1])
+              return <circle key={`seq-${i}`} cx={cx} cy={cy - 12} r={2.5} fill="#fbbf24" pointerEvents="none" />
+            })}
+        </svg>
+      </div>
     </div>
   )
 }
